@@ -2,6 +2,32 @@ name: Update Terraform lockfiles
 
 on:
   workflow_call:
+    inputs:
+      # engine:
+      #   description: 'The infra-as-code engine to use. Must be `terraform`.'
+      #   default: 'terraform'
+      #   required: false
+      #   type: string
+      engine-version:
+        description: 'The Terraform version to use for module initialization.'
+        default: '1.5.7'
+        required: false
+        type: string
+      selective-update:
+        description: 'Whether to selectively update state directories based on files changed in the PR. Set to false to fix historic problems.'
+        default: true
+        required: false
+        type: boolean
+      parallelization-limit:
+        description: 'How many statefile directories to update concurrently per Actions runner CPU core. Set to 0 for unlimited (can lead to mysterious problems on standard GitHub-hosted runners).'
+        default: 3
+        required: false
+        type: number
+      free-disk-space:
+        description: 'Whether or not to free runner disk space before beginning, since Terraform providers can be very large.'
+        default: true
+        required: false
+        type: boolean
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -15,6 +41,7 @@ jobs:
     steps:
       - name: Free disk space
         uses: jlumbroso/free-disk-space@v1.3.1
+        if: inputs.free-disk-space
         with:
           large-packages: false # This calls apt-get and is therefore a lot slower
 
@@ -29,7 +56,7 @@ jobs:
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.5.7
+          terraform_version: ${{ inputs.engine-version }}
 
       - name: Update all Terraform lockfiles
         shell: bash
@@ -43,7 +70,7 @@ jobs:
           # The eval here causes glob expansion.
           for _path in $(eval "echo $(yq -r '.dirs | keys | .[]' .terrateam/config.yml | tr '\n' ' ')"); do
             # Modified from https://stackoverflow.com/a/10641810/1198896 - if there hasn't been a change in the directory candidate, then skip
-            if git diff --merge-base ${{ github.base_ref }} --name-only --exit-code HEAD -- $_path >/dev/null; then
+            if ${{ inputs.selective-update}} && git diff --merge-base ${{ github.base_ref }} --name-only --exit-code HEAD -- $_path >/dev/null; then
               continue
             fi
 
@@ -56,7 +83,7 @@ jobs:
           # Note that we pass -P to xargs to enable parallelization even though GitHub Actions workers don't have a lot of cores, because this command *should be* largely I/O bound. (TODO: find out why -P0 causes ENOSPC errors)
           # To make log output usable, we prefix the directory name to each output line. ; is the sed s command separator, lord help us if anyone sticks that in a path (or whitespace...)
           # To prevent rare line interleaving, we set sed to be line-buffered with `stdbuf -oL`. We do this on sed, not xargs, because AFAIUI stream buffer mode is a process-local thing, not a kernel fd thing
-          done | sort | uniq | xargs -P$(($(nproc)*3)) -I'{}' bash -o pipefail -c 'cd {} && { trap "rm -rf .terraform" EXIT && terraform init -lock=false -backend=false && terraform providers lock -platform=darwin_arm64 -platform=darwin_amd64 -platform=linux_amd64; } 2>&1 | stdbuf -oL sed '\''s;^;[{}] ;'\'
+          done | sort | uniq | xargs -P$(($(nproc)*${{ inputs.parallelization-limit }})) -I'{}' bash -o pipefail -c 'cd {} && { trap "rm -rf .terraform" EXIT && terraform init -lock=false -backend=false && terraform providers lock -platform=darwin_arm64 -platform=darwin_amd64 -platform=linux_amd64; } 2>&1 | stdbuf -oL sed '\''s;^;[{}] ;'\'
 
 
       - name: Check for lockfile changes
