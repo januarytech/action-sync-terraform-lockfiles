@@ -1,0 +1,62 @@
+name: Update Terraform lockfiles
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+jobs:
+  terraform-lockfiles:
+    name: Update Terraform lockfiles
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.7
+
+      - name: Update all Terraform lockfiles
+        run: |
+          sudo apt-get install -yy yq
+          # First we build the list of potential dirs... (have to do it this way because some config dirs are for actual dirs, and some are for HCL files)
+          # The eval here causes glob expansion.
+          for _path in $(eval "echo $(yq -r '.dirs | keys | .[]' .terrateam/config.yml | tr '\n' ' ')"); do
+            if test -f $_path; then
+              echo $(dirname $_path)
+            else
+              echo $_path
+            fi
+          # ...and then - after we deduplicate - we generate a complete provider lockfile, with all relevant platforms
+          # Note that we pass -P0 to xargs to enable maximum parallelization even though GitHub Actions workers don't have a lot of cores, because this command *should be* largely I/O bound.
+          # To make log output usable, we prefix the directory name to each output line. ; is the sed s command separator, lord help us if anyone sticks that in a path (or whitespace...)
+          done | sort | uniq | xargs -P0 -I'{}' sh -c 'cd {}; terraform providers lock -platform=darwin_arm64 -platform=darwin_amd64 -platform=linux_amd64 2>&1 | sed '\''s;^;[{}] ;'\'
+
+
+      - name: Check for lockfile changes
+        id: lockfiles
+        run: |
+          if [[ -n $(git status --porcelain) ]]; then
+            echo "changes detected"
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "no changes detected"
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+        shell: bash
+
+      - name: Commit changes
+        if: steps.lockfiles.outputs.changed == 'true'
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m "Update Terraform lockfiles"
+          git push origin HEAD:${{ github.head_ref }}
