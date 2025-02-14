@@ -47,7 +47,7 @@ jobs:
           # The eval here causes glob expansion.
           for _path in $(eval "echo $(yq -r '.dirs | keys | .[]' .terrateam/config.yml | tr '\n' ' ')"); do
             # Modified from https://stackoverflow.com/a/10641810/1198896 - if there hasn't been a change in the directory candidate, then skip
-            if git diff --merge-base ${{ github.base_ref }} --name-only --exit-code HEAD -- $_path; then
+            if git diff --merge-base ${{ github.base_ref }} --name-only --exit-code HEAD -- $_path >/dev/null; then
               continue
             fi
 
