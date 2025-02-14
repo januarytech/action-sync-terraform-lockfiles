@@ -45,7 +45,7 @@ jobs:
           for _path in $(eval "echo $(yq -r '.dirs | keys | .[]' .terrateam/config.yml | tr '\n' ' ')"); do
             if test -f $_path; then
               echo $(dirname $_path)
-            else
+            elif test -d $_path; then
               echo $_path
             fi
           # ...and then - after we deduplicate - we generate a complete provider lockfile, with all relevant platforms
