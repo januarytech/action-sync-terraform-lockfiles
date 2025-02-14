@@ -42,6 +42,10 @@ grep -v '#' .github/workflows/update-lockfiles.yml | yq '.on.workflow_call.input
 
 String, default `1.5.7`. The Terraform version to use for module initialization.
 
+### `platforms`
+
+String, default `darwin_arm64,darwin_amd64,linux_amd64`. Comma-separated list of platforms to create lockfiles for.
+
 ### `selective-update`
 
 Boolean, default `true`. Whether to selectively update state directories based on files changed in the PR. Set to false to fix historic problems.
