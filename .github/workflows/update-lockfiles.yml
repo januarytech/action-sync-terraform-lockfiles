@@ -17,6 +17,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          large-packages: false # This calls apt-get and is therefore a lot slower
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
