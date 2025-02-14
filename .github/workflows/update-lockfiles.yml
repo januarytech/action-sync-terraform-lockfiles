@@ -34,6 +34,8 @@ jobs:
 
       - name: Update all Terraform lockfiles
         run: |
+          df -h # With many statefile dirs, disk space can fill up, so always output this to make it easy to figure out just how much disk space you have
+          echo
           sudo apt-get install -yy yq
           # First we build the list of potential dirs... (have to do it this way because some config dirs are for actual dirs, and some are for HCL files)
           # The eval here causes glob expansion.
