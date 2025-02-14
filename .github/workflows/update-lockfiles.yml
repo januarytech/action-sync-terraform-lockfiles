@@ -33,7 +33,10 @@ jobs:
           terraform_version: 1.5.7
 
       - name: Update all Terraform lockfiles
+        shell: bash
         run: |
+          shopt -s nullglob
+
           df -h # With many statefile dirs, disk space can fill up, so always output this to make it easy to figure out just how much disk space you have
           echo
           sudo apt-get install -yy yq
@@ -54,6 +57,7 @@ jobs:
 
       - name: Check for lockfile changes
         id: lockfiles
+        shell: bash
         run: |
           if [[ -n $(git status --porcelain) ]]; then
             echo "changes detected"
@@ -62,7 +66,6 @@ jobs:
             echo "no changes detected"
             echo "changed=false" >> $GITHUB_OUTPUT
           fi
-        shell: bash
 
       - name: Commit changes
         if: steps.lockfiles.outputs.changed == 'true'
