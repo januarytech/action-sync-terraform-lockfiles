@@ -37,7 +37,7 @@ jobs:
           # ...and then - after we deduplicate - we generate a complete provider lockfile, with all relevant platforms
           # Note that we pass -P0 to xargs to enable maximum parallelization even though GitHub Actions workers don't have a lot of cores, because this command *should be* largely I/O bound.
           # To make log output usable, we prefix the directory name to each output line. ; is the sed s command separator, lord help us if anyone sticks that in a path (or whitespace...)
-          done | sort | uniq | xargs -P0 -I'{}' sh -c 'cd {}; terraform providers lock -platform=darwin_arm64 -platform=darwin_amd64 -platform=linux_amd64 2>&1 | sed '\''s;^;[{}] ;'\'
+          done | sort | uniq | xargs -P0 -I'{}' sh -c 'cd {} && terraform init -backend=false && terraform providers lock -platform=darwin_arm64 -platform=darwin_amd64 -platform=linux_amd64 2>&1 | sed '\''s;^;[{}] ;'\'
 
 
       - name: Check for lockfile changes
