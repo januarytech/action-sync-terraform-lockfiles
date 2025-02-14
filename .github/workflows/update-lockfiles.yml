@@ -43,6 +43,11 @@ jobs:
           # First we build the list of potential dirs... (have to do it this way because some config dirs are for actual dirs, and some are for HCL files)
           # The eval here causes glob expansion.
           for _path in $(eval "echo $(yq -r '.dirs | keys | .[]' .terrateam/config.yml | tr '\n' ' ')"); do
+            # Modified from https://stackoverflow.com/a/10641810/1198896 - if there hasn't been a change in the directory candidate, then skip
+            if git diff --merge-base ${{ github.base_ref }} --name-only --exit-code HEAD -- $_path; then
+              continue
+            fi
+
             if test -f $_path; then
               echo $(dirname $_path)
             elif test -d $_path; then
