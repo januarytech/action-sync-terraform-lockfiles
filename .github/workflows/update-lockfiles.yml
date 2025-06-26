@@ -71,6 +71,10 @@ jobs:
           df -h # With many statefile dirs, disk space can fill up, so always output this to make it easy to figure out just how much disk space you have
           echo
           sudo apt-get install -yy yq
+
+          # Need to do this so that the statefile backend grep below works
+          terraform fmt -recursive .
+
           # First we build the list of potential dirs... (have to do it this way because some config dirs are for actual dirs, and some are for HCL files)
           # The eval here causes glob expansion.
           for _path in $(eval "echo $(yq -r '.dirs | keys | .[]' .terrateam/config.yml | tr '\n' ' ')"); do
@@ -79,9 +83,20 @@ jobs:
               continue
             fi
 
+            # This is the dir/file.tf -> dir/ normalization mentioned above
             if test -f $_path; then
-              echo $(dirname $_path)
-            elif test -d $_path; then
+              _path=$(dirname $_path)
+            fi
+
+            # Heuristic, until https://github.com/hashicorp/terraform/issues/19016 is fixed
+            # The goal here is to skip directories which are specified in automation config, but not actually statefile roots.
+            # This can occur when e.g. you have a shared module library, and you want to configure library modules in some way.
+            # This heuristic won't find statefile roots with the `local` backend - but if you're using that, you're not using automation anyway.
+            if ! grep -q 'backend ".*" {' $_path/*.tf; then
+              continue
+            fi
+
+            if test -d $_path; then
               echo $_path
             fi
           # ...and then - after we deduplicate - we generate a complete provider lockfile, with all relevant platforms
@@ -108,6 +123,6 @@ jobs:
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add -A
+          git add **/.terraform.lock.hcl
           git commit -m "Update Terraform lockfiles"
           git push origin HEAD:${{ github.head_ref }}
