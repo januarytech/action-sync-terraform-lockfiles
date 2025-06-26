@@ -61,3 +61,7 @@ Boolean, default `true`. Whether or not to free runner disk space before beginni
 ## Author
 
 AJ Jordan <aj.jordan@january.com>, on behalf of [January Technologies](https://www.january.com/) ([we're hiring](https://www.january.com/careers) - come help us fix what's broken in credit!)
+
+## License
+
+MIT
