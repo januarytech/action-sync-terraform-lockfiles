@@ -25,7 +25,7 @@ on:
 
 jobs:
   update-terraform-lockfiles:
-    uses: octo-org/another-repo/.github/workflows/workflow.yml@v1
+    uses: januarytech/action-sync-terraform-lockfiles/.github/workflows/update-lockfiles.yml@main # Change this to the version you want to pin to
     with:
       selective-update: false
 ```
