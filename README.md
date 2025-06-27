@@ -1,8 +1,8 @@
 # `action-sync-terraform-lockfiles`
 
-This GitHub Actions workflow will automatically push a commit to Pull Requests in your Terraform repository to ensure that lockfiles exist for every platform your developers (or Terraform automation runners) use.
+This GitHub Actions workflow will automatically push a commit to Pull Requests in your Terraform repository to ensure that lockfiles exist for every platform your developers (or Terraform automation runners) use. This both enforces that lockfiles exist _at all_ and provides a performance boost, because given a lockfile for e.g. macOS arm64 (what many developers use), running `terraform init` on Linux amd64 (what your CI system is likely using) performs a lot of time-consuming signature verification work, which is a waste. This workflow lets you do this work once, in Pull Request CI, and then commit it.
 
-Statefile directories are discovered from Terraform automation configuration. Currently only Terrateam is supported, but others may be supported in the future.
+Part of the motivation behind this workflow is that when juggling many statefiles - common when infrastructure grows large enough - it's difficult to enforce that lockfiles are committed to version control, for *all* of these statefile root modules. Therefore, this workflow discovers root modules from Terraform automation configuration. Currently only Terrateam is supported, but others may be supported in the future.
 
 ## Maintenance disclaimer
 
